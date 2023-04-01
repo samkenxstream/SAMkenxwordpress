@@ -42,8 +42,6 @@ __webpack_require__.d(__webpack_exports__, {
   "count": function() { return /* binding */ count; }
 });
 
-;// CONCATENATED MODULE: external "lodash"
-var external_lodash_namespaceObject = window["lodash"];
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/wordcount/build-module/defaultSettings.js
 /** @typedef {import('./index').WPWordCountStrategy} WPWordCountStrategy */
 
@@ -88,7 +86,7 @@ const defaultSettings = {
   HTMLcommentRegExp: /<!--[\s\S]*?-->/g,
   spaceRegExp: /&nbsp;|&#160;/gi,
   HTMLEntityRegExp: /&\S+?;/g,
-  // \u2014 = em-dash
+  // \u2014 = em-dash.
   connectorRegExp: /--|\u2014/g,
   // Characters to be removed from input text.
   removeRegExp: new RegExp(['[', // Basic Latin (extract)
@@ -121,7 +119,7 @@ const defaultSettings = {
    * Supplemental Mathematical Operators
    * Miscellaneous Symbols and Arrows
    */
-  '\u2000-\u2BFF', // Supplemental Punctuation
+  '\u2000-\u2BFF', // Supplemental Punctuation.
   '\u2E00-\u2E7F', ']'].join(''), 'g'),
   // Remove UTF-16 surrogate points, see https://en.wikipedia.org/wiki/UTF-16#U.2BD800_to_U.2BDFFF
   astralRegExp: /[\uD800-\uDBFF][\uDC00-\uDFFF]/g,
@@ -268,13 +266,8 @@ function transposeHTMLEntitiesToCountableChars(settings, text) {
 
 ;// CONCATENATED MODULE: ./node_modules/@wordpress/wordcount/build-module/index.js
 /**
- * External dependencies
- */
-
-/**
  * Internal dependencies
  */
-
 
 
 
@@ -308,7 +301,7 @@ function transposeHTMLEntitiesToCountableChars(settings, text) {
 function loadSettings(type, userSettings) {
   var _settings$l10n$shortc, _settings$l10n;
 
-  const settings = (0,external_lodash_namespaceObject.extend)({}, defaultSettings, userSettings);
+  const settings = Object.assign({}, defaultSettings, userSettings);
   settings.shortcodes = (_settings$l10n$shortc = (_settings$l10n = settings.l10n) === null || _settings$l10n === void 0 ? void 0 : _settings$l10n.shortcodes) !== null && _settings$l10n$shortc !== void 0 ? _settings$l10n$shortc : [];
 
   if (settings.shortcodes && settings.shortcodes.length) {
@@ -337,7 +330,7 @@ function loadSettings(type, userSettings) {
 function countWords(text, regex, settings) {
   var _text$match$length, _text$match;
 
-  text = (0,external_lodash_namespaceObject.flow)(stripTags.bind(null, settings), stripHTMLComments.bind(null, settings), stripShortcodes.bind(null, settings), stripSpaces.bind(null, settings), stripHTMLEntities.bind(null, settings), stripConnectors.bind(null, settings), stripRemovables.bind(null, settings))(text);
+  text = [stripTags.bind(null, settings), stripHTMLComments.bind(null, settings), stripShortcodes.bind(null, settings), stripSpaces.bind(null, settings), stripHTMLEntities.bind(null, settings), stripConnectors.bind(null, settings), stripRemovables.bind(null, settings)].reduce((result, fn) => fn(result), text);
   text = text + '\n';
   return (_text$match$length = (_text$match = text.match(regex)) === null || _text$match === void 0 ? void 0 : _text$match.length) !== null && _text$match$length !== void 0 ? _text$match$length : 0;
 }
@@ -355,7 +348,7 @@ function countWords(text, regex, settings) {
 function countCharacters(text, regex, settings) {
   var _text$match$length2, _text$match2;
 
-  text = (0,external_lodash_namespaceObject.flow)(stripTags.bind(null, settings), stripHTMLComments.bind(null, settings), stripShortcodes.bind(null, settings), transposeAstralsToCountableChar.bind(null, settings), stripSpaces.bind(null, settings), transposeHTMLEntitiesToCountableChars.bind(null, settings))(text);
+  text = [stripTags.bind(null, settings), stripHTMLComments.bind(null, settings), stripShortcodes.bind(null, settings), transposeAstralsToCountableChar.bind(null, settings), stripSpaces.bind(null, settings), transposeHTMLEntitiesToCountableChars.bind(null, settings)].reduce((result, fn) => fn(result), text);
   text = text + '\n';
   return (_text$match$length2 = (_text$match2 = text.match(regex)) === null || _text$match2 === void 0 ? void 0 : _text$match2.length) !== null && _text$match$length2 !== void 0 ? _text$match$length2 : 0;
 }

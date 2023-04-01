@@ -10,7 +10,7 @@
  * servers with known pretty permalink capability.
  *
  * Note: Though Nginx is detected, WordPress does not currently
- * generate rewrite rules for it. See https://wordpress.org/support/article/nginx/
+ * generate rewrite rules for it. See https://wordpress.org/documentation/article/nginx/
  *
  * @package WordPress
  */
@@ -29,9 +29,11 @@ if ( is_admin() ) {
 	} else {
 		preg_match( '#/wp-admin/?(.*?)$#i', $_SERVER['PHP_SELF'], $self_matches );
 	}
-	$pagenow = $self_matches[1];
+
+	$pagenow = ! empty( $self_matches[1] ) ? $self_matches[1] : '';
 	$pagenow = trim( $pagenow, '/' );
 	$pagenow = preg_replace( '#\?.*?$#', '', $pagenow );
+
 	if ( '' === $pagenow || 'index' === $pagenow || 'index.php' === $pagenow ) {
 		$pagenow = 'index.php';
 	} else {

@@ -14,6 +14,7 @@
  *
  * @see register_post_type()
  */
+#[AllowDynamicProperties]
 final class WP_Post_Type {
 	/**
 	 * Post type key.
@@ -221,7 +222,7 @@ final class WP_Post_Type {
 	 * Default empty array.
 	 *
 	 * @since 4.6.0
-	 * @var array $taxonomies
+	 * @var string[] $taxonomies
 	 */
 	public $taxonomies = array();
 
@@ -281,7 +282,7 @@ final class WP_Post_Type {
 	 * @link https://developer.wordpress.org/block-editor/developers/block-api/block-templates/
 	 *
 	 * @since 5.0.0
-	 * @var array $template
+	 * @var array[] $template
 	 */
 	public $template = array();
 
@@ -445,7 +446,12 @@ final class WP_Post_Type {
 		/**
 		 * Filters the arguments for registering a specific post type.
 		 *
-		 * The dynamic portion of the filter name, `$this->name`, refers to the post type key.
+		 * The dynamic portion of the filter name, `$post_type`, refers to the post type key.
+		 *
+		 * Possible hook names include:
+		 *
+		 *  - `register_post_post_type_args`
+		 *  - `register_page_post_type_args`
 		 *
 		 * @since 6.0.0
 		 *

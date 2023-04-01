@@ -17,6 +17,26 @@
 class WP_REST_Block_Patterns_Controller extends WP_REST_Controller {
 
 	/**
+	 * Defines whether remote patterns should be loaded.
+	 *
+	 * @since 6.0.0
+	 * @var bool
+	 */
+	private $remote_patterns_loaded;
+
+	/**
+	 * An array that maps old categories names to new ones.
+	 *
+	 * @since 6.2.0
+	 * @var array
+	 */
+	protected static $categories_migration = array(
+		'buttons' => 'call-to-action',
+		'columns' => 'text',
+		'query'   => 'posts',
+	);
+
+	/**
 	 * Constructs the controller.
 	 *
 	 * @since 6.0.0
@@ -76,23 +96,59 @@ class WP_REST_Block_Patterns_Controller extends WP_REST_Controller {
 	 * Retrieves all block patterns.
 	 *
 	 * @since 6.0.0
+	 * @since 6.2.0 Added migration for old core pattern categories to the new ones.
 	 *
 	 * @param WP_REST_Request $request Full details about the request.
 	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_items( $request ) {
-		// Load block patterns from w.org.
-		_load_remote_block_patterns(); // Patterns with the `core` keyword.
-		_load_remote_featured_patterns(); // Patterns in the `featured` category.
-		_register_remote_theme_patterns(); // Patterns requested by current theme.
+		if ( ! $this->remote_patterns_loaded ) {
+			// Load block patterns from w.org.
+			_load_remote_block_patterns(); // Patterns with the `core` keyword.
+			_load_remote_featured_patterns(); // Patterns in the `featured` category.
+			_register_remote_theme_patterns(); // Patterns requested by current theme.
+
+			$this->remote_patterns_loaded = true;
+		}
 
 		$response = array();
 		$patterns = WP_Block_Patterns_Registry::get_instance()->get_all_registered();
 		foreach ( $patterns as $pattern ) {
-			$prepared_pattern = $this->prepare_item_for_response( $pattern, $request );
+			$migrated_pattern = $this->migrate_pattern_categories( $pattern );
+			$prepared_pattern = $this->prepare_item_for_response( $migrated_pattern, $request );
 			$response[]       = $this->prepare_response_for_collection( $prepared_pattern );
 		}
 		return rest_ensure_response( $response );
+	}
+
+	/**
+	 * Migrates old core pattern categories to the new categories.
+	 *
+	 * Core pattern categories are revamped. Migration is needed to ensure
+	 * backwards compatibility.
+	 *
+	 * @since 6.2.0
+	 *
+	 * @param array $pattern Raw pattern as registered, before applying any changes.
+	 * @return array Migrated pattern.
+	 */
+	protected function migrate_pattern_categories( $pattern ) {
+		// No categories to migrate.
+		if (
+			! isset( $pattern['categories'] ) ||
+			! is_array( $pattern['categories'] )
+		) {
+			return $pattern;
+		}
+
+		foreach ( $pattern['categories'] as $index => $category ) {
+			// If the category exists as a key, then it needs migration.
+			if ( isset( static::$categories_migration[ $category ] ) ) {
+				$pattern['categories'][ $index ] = static::$categories_migration[ $category ];
+			}
+		}
+
+		return $pattern;
 	}
 
 	/**
@@ -100,7 +156,7 @@ class WP_REST_Block_Patterns_Controller extends WP_REST_Controller {
 	 *
 	 * @since 6.0.0
 	 *
-	 * @param object          $item    Raw pattern as registered, before any changes.
+	 * @param array           $item    Raw pattern as registered, before any changes.
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
 	 */
@@ -109,12 +165,15 @@ class WP_REST_Block_Patterns_Controller extends WP_REST_Controller {
 		$keys   = array(
 			'name'          => 'name',
 			'title'         => 'title',
+			'content'       => 'content',
 			'description'   => 'description',
 			'viewportWidth' => 'viewport_width',
-			'blockTypes'    => 'block_types',
+			'inserter'      => 'inserter',
 			'categories'    => 'categories',
 			'keywords'      => 'keywords',
-			'content'       => 'content',
+			'blockTypes'    => 'block_types',
+			'postTypes'     => 'post_types',
+			'templateTypes' => 'template_types',
 		);
 		$data   = array();
 		foreach ( $keys as $item_key => $rest_key ) {
@@ -154,21 +213,27 @@ class WP_REST_Block_Patterns_Controller extends WP_REST_Controller {
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit', 'embed' ),
 				),
+				'content'        => array(
+					'description' => __( 'The pattern content.' ),
+					'type'        => 'string',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit', 'embed' ),
+				),
 				'description'    => array(
 					'description' => __( 'The pattern detailed description.' ),
 					'type'        => 'string',
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit', 'embed' ),
 				),
-				'viewport_Width' => array(
+				'viewport_width' => array(
 					'description' => __( 'The pattern viewport width for inserter preview.' ),
 					'type'        => 'number',
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit', 'embed' ),
 				),
-				'block_Types'    => array(
-					'description' => __( 'Block types that the pattern is intended to be used with.' ),
-					'type'        => 'array',
+				'inserter'       => array(
+					'description' => __( 'Determines whether the pattern is visible in inserter.' ),
+					'type'        => 'boolean',
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit', 'embed' ),
 				),
@@ -184,9 +249,21 @@ class WP_REST_Block_Patterns_Controller extends WP_REST_Controller {
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit', 'embed' ),
 				),
-				'content'        => array(
-					'description' => __( 'The pattern content.' ),
-					'type'        => 'string',
+				'block_types'    => array(
+					'description' => __( 'Block types that the pattern is intended to be used with.' ),
+					'type'        => 'array',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit', 'embed' ),
+				),
+				'post_types'     => array(
+					'description' => __( 'An array of post types that the pattern is restricted to be used with.' ),
+					'type'        => 'array',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit', 'embed' ),
+				),
+				'template_types' => array(
+					'description' => __( 'An array of template types where the pattern fits.' ),
+					'type'        => 'array',
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit', 'embed' ),
 				),
